@@ -47,15 +47,26 @@ public class Main {
 				try {
 					Thread.sleep(1);
 				} catch (InterruptedException e) {
+					System.out.println("oops");
 					e.printStackTrace();
+					
 				}
 			}
 			
 			// Process the image however you like
-			Mat processedImage = ImageProcessor.process(rawImage);
+			double startTime = System.nanoTime()/1000000000.0;
 			
+			Mat processedImage = ImageProcessor.process(rawImage);
+			double endTime = System.nanoTime()/1000000000.0;
+			double duration = endTime - startTime;
+			System.out.println("time "+duration);
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 			// Update the GUI windows
-			updateWindow(cameraPane, rawImage);
+		//	updateWindow(cameraPane, rawImage);
 			updateWindow(opencvPane, processedImage);
 		}
 	}
