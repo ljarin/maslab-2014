@@ -27,17 +27,16 @@ public class ImageProcessor {
 	private static Scalar redLeft2 = new Scalar(0, 160, 100);
 	private static Scalar redRight2 = new Scalar(8, 256, 256);
 
-	private static Scalar greenLeft = new Scalar(170, 140, 170);
-	private static Scalar greenRight = new Scalar(180, 256, 256);
+	private static Scalar greenLeft = new Scalar(43, 100, 50);
+	private static Scalar greenRight = new Scalar(90, 256, 256);
 
 	private static Scalar redLeftS = new Scalar(170, 190, 170);
 	private static Scalar redRightS = new Scalar(180, 256, 256);
 
 	private static double minimalArea = 50;
-	private static Size picSize = new Size(320, 240);
+	private static Size picSize = new Size(640, 480);
 	Mat hierarchy;	
-	Mat imSlave;
-	Mat im2;
+	Mat imSlave, imRed, imGreen, imT,imT2;
 	List<MatOfPoint> contours;
 	
 
@@ -58,9 +57,12 @@ public class ImageProcessor {
 		this.log = log;
 		this.testnumber = testnumber;
 		imSlave = new Mat();
-		im2 = new Mat();
+		imRed = new Mat();
+		imGreen=new Mat();
 		hierarchy = new Mat();
 		contours = new ArrayList<MatOfPoint>();
+		imT = new Mat();
+		imT2=new Mat();
 	}
 
 	/**
@@ -74,11 +76,11 @@ public class ImageProcessor {
 	 */
 	private void resample(Mat source) {		
 		Imgproc.resize(source, source, picSize, 0, 0, Imgproc.INTER_NEAREST);
-		blur(source);	
+		//blur(source);	
 	}
 
 	private void blur(Mat source) {
-		Imgproc.GaussianBlur(source, source, new Size(5, 5), 3);
+		Imgproc.GaussianBlur(source, source, new Size(3, 3), 1);
 
 	}
 
@@ -92,7 +94,7 @@ public class ImageProcessor {
 	private Mat getColor(Mat imgHSV, Color color) {
 
 		Scalar rangeLeft = new Scalar(0, 0, 0), rangeRight = new Scalar(0, 0, 0);
-
+		
 		if (color.equals(Color.red)) {
 			rangeLeft = redLeft1;
 			rangeRight = redRight1;
@@ -101,36 +103,32 @@ public class ImageProcessor {
 			rangeRight = greenRight;
 		}
 
+		imT=new Mat(picSize, CvType.CV_8UC1);
+		imT2=new Mat(picSize, CvType.CV_8UC1);
+		
+		Core.inRange(imgHSV, rangeLeft, rangeRight, imT);
+		
 		if (color == Color.red) {
-			int rotation = 128 - 255; // 255 = red
-			Core.add(imgHSV, new Scalar(rotation, 0, 0), imgHSV);
+			Core.inRange(imgHSV, redLeft2, redRight2, imT2);
+			Core.bitwise_or(imT, imT2, imT);
 		}
-
-		Mat im1 = new Mat(imgHSV.size(), CvType.CV_8U, new Scalar(1));
-		Core.inRange(imgHSV, rangeLeft, rangeRight, im1);
-
-		if (color == Color.red) {
-			Mat im2 = new Mat(imgHSV.size(), CvType.CV_8U, new Scalar(1));
-			Core.inRange(imgHSV, redLeft2, redRight2, im2);
-			Core.bitwise_or(im1, im2, im1);
-		}
-
-		return im1;
+		
+		return imT;
 	}
 
 	/**
 	 * Find two largest contours in the image
 	 * 
-	 * @param im2
+	 * @param imRed
 	 *            source image
 	 * @param toEdit
 	 * @param testnumber
 	 * @return a pair of contours
 	 */
-	private Contour[] findTwoLargestContours(Mat im2, Mat toEdit) {
+	private Contour[] findTwoLargestContours(Mat image, Mat toEdit) {
 		
 		// find the contours of all white spots
-		Imgproc.findContours(im2, contours,hierarchy, Imgproc.RETR_EXTERNAL,
+		Imgproc.findContours(image, contours,hierarchy, Imgproc.RETR_EXTERNAL,
 				Imgproc.CHAIN_APPROX_NONE);
 
 		// checking if any contours found
@@ -157,14 +155,14 @@ public class ImageProcessor {
 		
 		if (log) {
 			Imgproc.drawContours(toEdit, contours, -1, new Scalar(0, 130, 130),
-					2);
+					1);
 			Imgproc.drawContours(toEdit, contours, largestIndex, new Scalar(0,
-					255, 0), 2);
+					255, 0), 1);
 			Imgproc.drawContours(toEdit, contours, secondLargestIndex,
-					new Scalar(0, 255, 0), 2);
-			Highgui.imwrite("resources/contours" + testnumber + ".png", toEdit);
+					new Scalar(0, 255, 0), 1);			
 		}
 
+		//Contour is a self defined class.. see Contour.java		
 		Contour[] contourPair = new Contour[2];
 		if (largestIndex == secondLargestIndex) {
 			contourPair = new Contour[1];
@@ -181,12 +179,15 @@ public class ImageProcessor {
 
 		boolean sawLabel = false;
 		boolean sawBall = false;
-
+		
 		for (int i = 0; i < contours.length; i++) {
+			contours[i].printPr();
+		
 			if (contours[i].isRect() && !sawLabel) {
 				detector.sawLabel(color, contours[i].center().x,
 						contours[i].center().y);
 				System.out.println("sawLabel " + color.toString());
+				
 				sawLabel=true;
 			} else if (contours[i].isEll() && !sawBall) {
 				detector.sawBall(color, contours[i].center().x,
@@ -199,8 +200,9 @@ public class ImageProcessor {
 				System.out.println("sawBall " + color.toString());
 				sawBall=true;
 			}
-
+			
 			if (log) {
+				contours[i].drawR(toEdit);
 				byte[] data = { (byte) 255, (byte) 0, (byte) 0 };
 				for (int k = -2; k < 3; k++) {
 					for (int j = -2; j < 3; j++) {
@@ -234,24 +236,27 @@ public class ImageProcessor {
 		
 		
 		timer.print("resampling");
-		timer.start();
 		
+		Mat raw=new Mat();
+		Imgproc.cvtColor(rawImage, raw, Imgproc.COLOR_BGR2HSV);
 		
-		Imgproc.cvtColor(rawImage, im2, Imgproc.COLOR_BGR2HSV);
-		im2 = getColor(im2, Color.red);
+		//extract thresholded colors
+		imRed = getColor(raw, Color.red);
+		imGreen=getColor(raw, Color.green);
+		
 		if (log) {
-			Highgui.imwrite("resources/filtered" + testnumber + ".png", im2);
+			Highgui.imwrite("resources/redfiltered" + testnumber + ".png", imRed);
+			Highgui.imwrite("resources/greenfiltered" + testnumber + ".png", imGreen);
 		}
 		
-		
-		timer.print("threshholding");
-		timer.start();
-		
-		
-		Contour[] contours = findTwoLargestContours(im2, imSlave);
+		//find and analyze contours	for red
+		Contour[] contours = findTwoLargestContours(imRed, imSlave);
 		analyzeContours(contours, Color.red, detector, imSlave);
 		
-		timer.print("finding contours");
+		//find and analyze contours	for green
+		contours = findTwoLargestContours(imGreen, imSlave);
+		analyzeContours(contours, Color.green, detector, imSlave);
+		
 		timer.print("everything");	 
 		
 		 
