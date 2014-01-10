@@ -227,7 +227,7 @@ public class ImageProcessor {
 		
 		
 		VisionDetector detector = new VisionDetector();	
-		resample(rawImage);
+		//resample(rawImage);
 		
 		
 		if (log) {
@@ -235,14 +235,17 @@ public class ImageProcessor {
 		}
 		
 		
-		timer.print("resampling");
 		
 		Mat raw=new Mat();
 		Imgproc.cvtColor(rawImage, raw, Imgproc.COLOR_BGR2HSV);
 		
+		timer.print("HSV converting");
+		
+		timer.start();
 		//extract thresholded colors
 		imRed = getColor(raw, Color.red);
 		imGreen=getColor(raw, Color.green);
+		timer.print("thresholding"); timer.start();
 		
 		if (log) {
 			Highgui.imwrite("resources/redfiltered" + testnumber + ".png", imRed);
@@ -253,9 +256,12 @@ public class ImageProcessor {
 		Contour[] contours = findTwoLargestContours(imRed, imSlave);
 		analyzeContours(contours, Color.red, detector, imSlave);
 		
+		
 		//find and analyze contours	for green
 		contours = findTwoLargestContours(imGreen, imSlave);
 		analyzeContours(contours, Color.green, detector, imSlave);
+		
+		timer.print("contours");
 		
 		timer.print("everything");	 
 		
