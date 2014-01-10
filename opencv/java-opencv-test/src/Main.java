@@ -55,8 +55,8 @@ public class Main {
 			
 			// Process the image however you like
 			double startTime = System.nanoTime()/1000000000.0;
-			
-			Mat processedImage = ImageProcessor.process(rawImage);
+			ImageProcessor proc=new ImageProcessor(false,2);
+		    proc.process(rawImage);
 			double endTime = System.nanoTime()/1000000000.0;
 			double duration = endTime - startTime;
 			System.out.println("time "+duration);
@@ -67,7 +67,7 @@ public class Main {
 			}
 			// Update the GUI windows
 		//	updateWindow(cameraPane, rawImage);
-			updateWindow(opencvPane, processedImage);
+		//	updateWindow(opencvPane, processedImage);
 		}
 	}
 	
